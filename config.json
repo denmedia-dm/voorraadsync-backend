@@ -1,0 +1,11 @@
+{
+  "bol": {
+    "client_id": "JOUW_BOL_CLIENT_ID",
+    "client_secret": "JOUW_BOL_CLIENT_SECRET"
+  },
+  "woocommerce": {
+    "url": "https://jouwwebshop.nl",
+    "consumer_key": "JOUW_WC_KEY",
+    "consumer_secret": "JOUW_WC_SECRET"
+  }
+}
