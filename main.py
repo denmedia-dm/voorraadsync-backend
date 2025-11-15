@@ -1,25 +1,26 @@
 from fastapi import FastAPI
-from bol_api import get_bol_products
-from woo_api import get_woo_products, update_woo_stock
+import woo_api
+import bol_api
 
-app = FastAPI(title="VoorraadSync", description="Bol.com en WooCommerce voorraad synchronisatie", version="1.0")
+app = FastAPI()
 
 @app.get("/")
 def home():
     return {"status": "running", "message": "VoorraadSync API actief 🎯"}
 
+# --- WooCommerce Endpoints ---
+
 @app.get("/woo/products")
 def woo_products():
-    return get_woo_products()
+    return woo_api.get_woo_products()
 
 @app.get("/woo/update_stock/{product_id}/{quantity}")
 def update_woo_stock(product_id: int, quantity: int):
     return woo_api.update_stock(product_id, quantity)
 
+
+# --- Bol.com Endpoints ---
+
 @app.get("/bol/products")
 def bol_products():
-    return get_bol_products()
-
-@app.put("/woo/update_stock/{product_id}/{new_stock}")
-def update_stock(product_id: int, new_stock: int):
-    return update_woo_stock(product_id, new_stock)
+    return bol_api.get_bol_products()
