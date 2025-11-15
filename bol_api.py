@@ -14,6 +14,35 @@ CLIENT_SECRET = CONFIG["bol"]["client_secret"]
 access_token = None
 token_expiry = 0
 
+def get_offer_id(product_id):
+    mapping = {
+        28577: "9116f20f-89e1-4e60-8600-f77fd0dde806"
+    }
+    return mapping.get(product_id)
+
+def update_bol_stock(product_id, quantity):
+    offer_id = get_offer_id(product_id)
+
+    if not offer_id:
+        return {"error": "Offer ID not found for this product"}
+
+    token = get_access_token()
+    if isinstance(token, dict):
+        return token
+
+    url = f"https://api.bol.com/retailer/offers/{offer_id}/stock"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/vnd.retailer.v10+json",
+        "Accept": "application/vnd.retailer.v10+json"
+    }
+
+    data = {
+        "amount": quantity
+    }
+
+    response = requests.put(url, json=data, headers=headers)
+    return response.json()
 
 def get_access_token():
     """
