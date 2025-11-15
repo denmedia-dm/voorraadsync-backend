@@ -12,6 +12,10 @@ def home():
 def woo_products():
     return get_woo_products()
 
+@app.get("/woo/update_stock/{product_id}/{quantity}")
+def update_woo_stock(product_id: int, quantity: int):
+    return woo_api.update_stock(product_id, quantity)
+
 @app.get("/bol/products")
 def bol_products():
     return get_bol_products()
