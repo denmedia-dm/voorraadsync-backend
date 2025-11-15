@@ -33,7 +33,7 @@ def get_access_token():
     response = requests.post(url, headers=headers, data=data)
 
     if response.status_code != 200:
-        return {"error": response.text}
+        return {"error": response.text, "status": response.status_code}
 
     token_json = response.json()
     access_token = token_json["access_token"]
@@ -59,4 +59,4 @@ def get_bol_products():
     try:
         return response.json()
     except:
-        return {"error": response.text}
+        return {"error": response.text, "status": response.status_code}
