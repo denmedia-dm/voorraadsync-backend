@@ -1,29 +1,62 @@
 import requests
 import json
-from dotenv import load_dotenv
-import os
-
-load_dotenv()
+import base64
+import time
 
 with open("config.json") as f:
     CONFIG = json.load(f)
 
-BOL_CLIENT_ID = CONFIG["bol"]["client_id"]
-BOL_CLIENT_SECRET = CONFIG["bol"]["client_secret"]
+CLIENT_ID = CONFIG["bol"]["client_id"]
+CLIENT_SECRET = CONFIG["bol"]["client_secret"]
 
-# Bu endpoint test içindir (ürün listesi gibi örnek fonksiyonlar eklenebilir)
-def get_bol_products():
-    """
-    Haalt een lijst van producten op uit Bol.com API (voorbeeldfunctie)
-    Türkçe: Bol.com üzerindeki ürün listesini getirir (örnek)
-    """
-    url = "https://api.bol.com/retailer-demo/products"
+# Token cache
+access_token = None
+token_expiry = 0
+
+def get_access_token():
+    global access_token, token_expiry
+
+    # Token geçerli ise yeniden alma
+    if access_token and time.time() < token_expiry:
+        return access_token
+
+    # Client ID + Secret -> Base64 encode
+    auth = base64.b64encode(f"{CLIENT_ID}:{CLIENT_SECRET}".encode()).decode()
+
+    url = "https://api.bol.com/retailer/oauth/token"
     headers = {
-        "Accept": "application/json",
-        "Content-Type": "application/json"
+        "Authorization": f"Basic {auth}",
+        "Content-Type": "application/x-www-form-urlencoded"
     }
+    data = {"grant_type": "client_credentials"}
+
+    response = requests.post(url, headers=headers, data=data)
+
+    if response.status_code != 200:
+        return {"error": response.text}
+
+    token_json = response.json()
+    access_token = token_json["access_token"]
+    token_expiry = time.time() + token_json["expires_in"] - 30  # token + margin
+
+    return access_token
+
+
+def get_bol_products():
+    token = get_access_token()
+
+    if isinstance(token, dict):  # hata
+        return token
+
+    url = "https://api.bol.com/retailer/products"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.retailer.v10+json"
+    }
+
     response = requests.get(url, headers=headers)
-    if response.status_code == 200:
+
+    try:
         return response.json()
-    else:
+    except:
         return {"error": response.text}
