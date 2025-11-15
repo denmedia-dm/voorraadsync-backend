@@ -4,8 +4,8 @@
     "client_secret": "JOUW_BOL_CLIENT_SECRET"
   },
   "woocommerce": {
-    "url": "https://jouwwebshop.nl",
-    "consumer_key": "ck_ba3c6271a369557dfe02ab79cb05c1da69f9316a",
-    "consumer_secret": "cs_f56524b18256d3848d6ea85748944f6834c657ce"
+    "url": "https://pochon.nl",
+    "consumer_key": "ck_f05795418d627347c709606304baa63a90ede606",
+    "consumer_secret": "cs_5da2e49d302317592d7a412ae7f11c240ef8fe6a"
   }
 }
