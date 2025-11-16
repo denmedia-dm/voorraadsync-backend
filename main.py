@@ -9,6 +9,7 @@ app = FastAPI()
 
 templates = Jinja2Templates(directory="templates")
 
+
 @app.get("/dashboard", response_class=HTMLResponse)
 def dashboard(request: Request):
     data = {
