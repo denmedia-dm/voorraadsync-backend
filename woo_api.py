@@ -13,16 +13,6 @@ WC_SECRET = CONFIG["woocommerce"]["consumer_secret"]
 # -------------------------------------------------------
 #   Tüm WooCommerce ürünlerini sınırsız şekilde çek
 # -------------------------------------------------------
-import requests
-import json
-
-with open("config.json") as f:
-    CONFIG = json.load(f)
-
-WC_URL = CONFIG["woocommerce"]["url"]
-WC_KEY = CONFIG["woocommerce"]["consumer_key"]
-WC_SECRET = CONFIG["woocommerce"]["consumer_secret"]
-
 def get_woo_products():
     """
     WooCommerce tüm ürünleri (sayfa sayfa) çeker.
