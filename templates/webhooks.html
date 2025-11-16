@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+    .page {
+        max-width: 1200px;
+        margin: 30px auto;
+        padding: 0 15px;
+    }
+
+    h1 {
+        font-size: 28px;
+        margin-bottom: 10px;
+    }
+
+    .subtitle {
+        color: #6b7280;
+        margin-bottom: 20px;
+        font-size: 14px;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        border-radius: 12px;
+        overflow: hidden;
+        background: white;
+        box-shadow: 0 4px 18px rgba(0,0,0,0.04);
+        font-size: 13px;
+    }
+
+    thead {
+        background: #f3f4f6;
+    }
+
+    th, td {
+        padding: 8px 10px;
+        border-bottom: 1px solid #e5e7eb;
+        text-align: left;
+        vertical-align: top;
+    }
+
+    tr:hover {
+        background: #f9fafb;
+    }
+
+    .badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 11px;
+        color: white;
+        background: #4b5563;
+    }
+
+    .badge-woo {
+        background: #2563eb;
+    }
+
+    .json-block {
+        font-family: "Courier New", monospace;
+        font-size: 11px;
+        background: #f9fafb;
+        border-radius: 8px;
+        padding: 8px;
+        max-height: 200px;
+        overflow: auto;
+        white-space: pre-wrap;
+    }
+
+    .no-logs {
+        padding: 20px;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 18px rgba(0,0,0,0.04);
+        font-size: 14px;
+    }
+</style>
+
+<div class="page">
+    <h1>Webhook Logları</h1>
+    <div class="subtitle">
+        Son gelen WooCommerce webhook kayıtları (en yeni en üstte).  
+        Stok değişimlerinde backend’e gelen ham veriyi buradan görebilirsin.
+    </div>
+
+    {% if logs and logs|length > 0 %}
+    <table>
+        <thead>
+            <tr>
+                <th>Tarih / Saat</th>
+                <th>Kaynak</th>
+                <th>Ürün ID</th>
+                <th>Stok</th>
+                <th>Detay</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in logs %}
+            <tr>
+                <td>{{ log.timestamp }}</td>
+                <td>
+                    <span class="badge badge-woo">
+                        {{ log.source }}
+                    </span>
+                </td>
+                <td>{{ log.product_id }}</td>
+                <td>{{ log.stock }}</td>
+                <td>
+                    <details>
+                        <summary>Ham JSON</summary>
+                        <div class="json-block">
+{{ log.raw | tojson(indent=2) }}
+                        </div>
+                    </details>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="no-logs">
+        Şu anda kayıtlı webhook logu yok.  
+        WooCommerce’te stok değişikliği olup webhook tetiklenince burada görünmeye başlayacak.
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}
