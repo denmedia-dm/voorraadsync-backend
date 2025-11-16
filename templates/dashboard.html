@@ -1,10 +1,137 @@
 {% extends "base.html" %}
+
 {% block content %}
 
-<h1>{{ data.title }}</h1>
+<style>
+    .container {
+        max-width: 1200px;
+        margin: auto;
+        margin-top: 40px;
+        padding: 20px;
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    }
 
-<p><strong>Toplam ürün:</strong> {{ data.total_products }}</p>
-<p><strong>Düşük stok:</strong> {{ data.low_stock }}</p>
-<p><strong>Son senkron:</strong> {{ data.last_sync }}</p>
+    h1 {
+        font-size: 42px;
+        font-weight: 800;
+        margin-bottom: 40px;
+    }
+
+    .stat {
+        font-size: 24px;
+        margin-bottom: 15px;
+    }
+
+    .stat-label {
+        font-weight: 700;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 40px;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+    thead {
+        background: #f3f4f6;
+        font-weight: bold;
+    }
+
+    th, td {
+        padding: 12px 10px;
+        border-bottom: 1px solid #e5e7eb;
+        font-size: 15px;
+    }
+
+    tr:hover {
+        background: #fafafa;
+    }
+
+    .low-stock {
+        color: red;
+        font-weight: bold;
+    }
+
+    @media (max-width: 768px) {
+        table {
+            font-size: 14px;
+        }
+        h1 {
+            font-size: 32px;
+        }
+        .stat {
+            font-size: 20px;
+        }
+    }
+</style>
+
+
+<div class="container">
+
+    <h1>{{ data.title }}</h1>
+
+    <div class="stat">
+        <span class="stat-label">Toplam ürün:</span>
+        {{ data.total_products }}
+    </div>
+
+    <div class="stat">
+        <span class="stat-label">Düşük stok:</span>
+        {{ data.low_stock }}
+    </div>
+
+    <div class="stat">
+        <span class="stat-label">Son senkron:</span>
+        {{ data.last_sync }}
+    </div>
+
+    <hr style="margin: 40px 0;">
+
+    <h2 style="margin-bottom: 20px; font-size: 28px;">Ürün Listesi</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Ürün Adı</th>
+                <th>SKU</th>
+                <th>Stok</th>
+                <th>Fiyat (€)</th>
+                <th>Durum</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for p in data.products %}
+            <tr>
+                <td>{{ p.id }}</td>
+
+                <td>
+                    {{ p.name }}
+
+                    {% if p.type == "variation" %}
+                    <div style="font-size: 12px; color: #777;">(Varyasyon)</div>
+                    {% endif %}
+                </td>
+
+                <td>{{ p.sku }}</td>
+
+                <td class="{% if p.stock_quantity|int < 5 %}low-stock{% endif %}">
+                    {{ p.stock_quantity }}
+                </td>
+
+                <td>{{ p.price }}</td>
+
+                <td>{{ p.status }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+</div>
 
 {% endblock %}
