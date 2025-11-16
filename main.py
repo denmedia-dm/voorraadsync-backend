@@ -44,6 +44,7 @@ def dashboard(request: Request):
 
     except Exception as e:
         print("Dashboard error:", e)
+        products = []
         total_products = 0
         low_stock = 0
         last_sync_time = "WooCommerce bağlantı hatası"
@@ -52,7 +53,8 @@ def dashboard(request: Request):
         "title": "VoorraadSync Dashboard",
         "total_products": total_products,
         "low_stock": low_stock,
-        "last_sync": last_sync_time
+        "last_sync": last_sync_time,
+        "products": products
     }
 
     return templates.TemplateResponse(
