@@ -218,4 +218,57 @@ function filterTable() {
 loadPage(1);
 </script>
 
+<script>
+let currentPage = 1;
+let totalPages = 1;
+
+function loadPage(page) {
+    fetch(`/woo/products/page/${page}`)
+        .then(res => res.json())
+        .then(data => {
+
+            currentPage = data.page;
+            totalPages = data.total_pages;
+
+            document.getElementById("page-info").innerText =
+                `Sayfa ${currentPage} / ${totalPages}`;
+
+            const tbody = document.getElementById("product-body");
+            tbody.innerHTML = "";
+
+            data.items.forEach(p => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${p.id}</td>
+                        <td>${p.name}</td>
+                        <td>${p.sku ?? "-"}</td>
+                        <td>${p.stock_quantity ?? "-"}</td>
+                        <td>${p.regular_price ?? "-"}</td>
+                        <td>${p.status}</td>
+                        <td>
+                            <input type="number" id="qty-${p.id}" value="${p.stock_quantity ?? 0}">
+                            <button class="btn-save" onclick="updateStock(${p.id})">Kaydet</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        });
+}
+
+function nextPage() {
+    if (currentPage < totalPages) {
+        loadPage(currentPage + 1);
+    }
+}
+
+function prevPage() {
+    if (currentPage > 1) {
+        loadPage(currentPage - 1);
+    }
+}
+
+// İlk sayfa yükle
+loadPage(1);
+</script>
+
 {% endblock %}
