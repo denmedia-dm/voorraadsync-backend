@@ -11,7 +11,6 @@ import bol_api
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 
-# Global senkron zamanı
 last_sync_time = None
 
 
@@ -45,12 +44,15 @@ def dashboard(request: Request):
     global last_sync_time
 
     try:
-        # Sadece istatistik için tüm ürünleri çekiyoruz
-        products = woo_api.get_woo_products()
+        # Dashboard sadece istatistik gösterir → ilk sayfayı çekiyoruz
+        first_page = woo_api.get_woo_products(page=1, per_page=50)
 
-        total_products = len(products)
+        total_products = first_page.get("total_items", 0)
+        items = first_page.get("items", [])
+
+        # düşük stok
         low_stock = sum(
-            1 for p in products
+            1 for p in items
             if p.get("stock_quantity") not in [None, ""] and int(p["stock_quantity"]) < 5
         )
 
@@ -61,7 +63,8 @@ def dashboard(request: Request):
         print("Dashboard error:", e)
         total_products = 0
         low_stock = 0
-        last_sync_time = last_sync_time or "WooCommerce bağlantı hatası"
+        if last_sync_time is None:
+            last_sync_time = "WooCommerce bağlantı hatası"
 
     data = {
         "title": "VoorraadSync Dashboard",
@@ -70,13 +73,10 @@ def dashboard(request: Request):
         "last_sync": last_sync_time,
     }
 
-    return templates.TemplateResponse(
-        "dashboard.html",
-        {"request": request, "data": data}
-    )
+    return templates.TemplateResponse("dashboard.html", {"request": request, "data": data})
 
 
-# ----------------- WEBHOOK GERÇEK ZAMANLI LOG PANELİ -----------------
+# ----------------- WEBHOOK PANEL -----------------
 @app.get("/webhooks", response_class=HTMLResponse)
 def webhooks_page(request: Request):
     logs = read_webhook_logs()
@@ -89,44 +89,21 @@ def webhooks_page(request: Request):
 
 
 # ----------------- WOO ENDPOINTLERİ -----------------
-@app.get("/woo/products")
-def woo_products():
-    return woo_api.get_woo_products()
-
-
-# -------- GERÇEK WOO API PAGINATION (TAVSİYE EDİLEN) --------
 @app.get("/woo/products/page/{page}")
 def woo_products_page(page: int, per_page: int = 50):
     """
-    WooCommerce ürünlerini native pagination ile çeker.
-    Tek seferde *gerçek* WooCommerce sayfası geliyor.
-    Dashboard bu endpoint’i kullanır.
+    WooCommerce ürünlerini gerçek WooCommerce pagination ile getirir.
     """
-
     try:
-        url = f"{woo_api.WC_URL}/wp-json/wc/v3/products"
-        params = {
-            "page": page,
-            "per_page": per_page
-        }
+        result = woo_api.get_woo_products(page=page, per_page=per_page)
 
-        response = requests.get(url, params=params, auth=(woo_api.WC_KEY, woo_api.WC_SECRET))
-        items = response.json()
+        if "error" in result:
+            return result
 
-        total_pages = int(response.headers.get("X-WP-TotalPages", 1))
-        total_items = int(response.headers.get("X-WP-Total", len(items)))
-
-        return {
-            "page": page,
-            "per_page": per_page,
-            "total_pages": total_pages,
-            "total_items": total_items,
-            "items": items,
-        }
+        return result
 
     except Exception as e:
         return {"error": str(e)}
-
 
 
 @app.get("/woo/update_stock/{product_id}/{quantity}")
@@ -140,19 +117,18 @@ def sync_now():
     global last_sync_time
 
     try:
-        products = woo_api.get_woo_products()
+        page1 = woo_api.get_woo_products(page=1, per_page=50)
         last_sync_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         return {
             "status": "ok",
             "message": "Senkron tamamlandı",
-            "count": len(products),
+            "count": page1.get("total_items", 0),
             "last_sync": last_sync_time
         }
 
     except Exception as e:
         return {"status": "error", "message": str(e)}
-
 
 
 # ----------------- BOL ENDPOINTLERİ -----------------
@@ -166,7 +142,6 @@ def bol_test_token():
     return bol_api.get_access_token()
 
 
-
 # ----------------- WEBHOOK JSON API -----------------
 @app.get("/webhooks/logs")
 def get_webhook_logs(limit: int = 200):
@@ -174,14 +149,9 @@ def get_webhook_logs(limit: int = 200):
     return {"logs": logs}
 
 
-
 # ----------------- WOO → BOL WEBHOOK -----------------
 @app.post("/webhook/woo")
 async def woo_webhook(data: dict):
-    """
-    WooCommerce bu endpoint'e POST gönderir.
-    Biz burada hem log kaydediyoruz hem de Bol senkronu tetikleyebiliriz.
-    """
 
     product_id = data.get("id")
     stock = data.get("stock_quantity")
@@ -202,11 +172,9 @@ async def woo_webhook(data: dict):
     except:
         pass
 
-    # Veri eksikse dön
     if not product_id:
         return {"error": "Missing product_id"}
 
-    # Bol stok güncelle (API aktif olduğunda)
     try:
         bol_api.update_bol_stock(product_id, stock)
     except Exception as e:
@@ -214,28 +182,22 @@ async def woo_webhook(data: dict):
 
     return {"status": "ok"}
 
+
+# ----------------- CSV EXPORT -----------------
 import csv
 from fastapi.responses import StreamingResponse
 from io import StringIO
 
 @app.get("/export/csv")
 def export_csv():
-    """
-    WooCommerce ürünlerini CSV olarak export eder.
-    """
     try:
-        products = woo_api.get_woo_products()
+        products = woo_api.get_woo_products(page=1, per_page=500)["items"]
 
-        # CSV buffer
         csv_buffer = StringIO()
         writer = csv.writer(csv_buffer)
 
-        # CSV header
-        writer.writerow([
-            "ID", "Name", "SKU", "Stock", "Price", "Status", "Type"
-        ])
+        writer.writerow(["ID", "Name", "SKU", "Stock", "Price", "Status", "Type"])
 
-        # Data rows
         for p in products:
             writer.writerow([
                 p.get("id"),
@@ -252,9 +214,7 @@ def export_csv():
         return StreamingResponse(
             csv_buffer,
             media_type="text/csv",
-            headers={
-                "Content-Disposition": "attachment; filename=woocommerce_products.csv"
-            }
+            headers={"Content-Disposition": "attachment; filename=products.csv"}
         )
 
     except Exception as e:
