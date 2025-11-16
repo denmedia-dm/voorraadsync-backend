@@ -1,8 +1,9 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Query
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 from datetime import datetime
 import json
+import requests
 
 import woo_api
 import bol_api
@@ -14,21 +15,19 @@ templates = Jinja2Templates(directory="templates")
 last_sync_time = None
 
 
-# ----------------- Yardımcı: Webhook loglarını oku -----------------
-def read_webhook_logs(limit: int = 100):
+# ----------------- Webhook Loglarını Oku -----------------
+def read_webhook_logs(limit: int = 200):
     logs = []
     try:
         with open("webhook_logs.jsonl", "r") as f:
             lines = f.readlines()
 
-        # En son gelenleri tersten al
         for line in reversed(lines[-limit:]):
             try:
                 logs.append(json.loads(line))
-            except json.JSONDecodeError:
+            except:
                 continue
     except FileNotFoundError:
-        # log dosyası yoksa boş liste dön
         pass
 
     return logs
@@ -46,13 +45,13 @@ def dashboard(request: Request):
     global last_sync_time
 
     try:
+        # Sadece istatistik için tüm ürünleri çekiyoruz
         products = woo_api.get_woo_products()
 
         total_products = len(products)
         low_stock = sum(
             1 for p in products
-            if p.get("stock_quantity") is not None
-            and int(p.get("stock_quantity")) < 5
+            if p.get("stock_quantity") not in [None, ""] and int(p["stock_quantity"]) < 5
         )
 
         if last_sync_time is None:
@@ -62,8 +61,7 @@ def dashboard(request: Request):
         print("Dashboard error:", e)
         total_products = 0
         low_stock = 0
-        if last_sync_time is None:
-            last_sync_time = "WooCommerce bağlantı hatası"
+        last_sync_time = last_sync_time or "WooCommerce bağlantı hatası"
 
     data = {
         "title": "VoorraadSync Dashboard",
@@ -78,7 +76,7 @@ def dashboard(request: Request):
     )
 
 
-# ----------------- WEBHOOK PANEL (HTML) -----------------
+# ----------------- WEBHOOK GERÇEK ZAMANLI LOG PANELİ -----------------
 @app.get("/webhooks", response_class=HTMLResponse)
 def webhooks_page(request: Request):
     logs = read_webhook_logs()
@@ -90,58 +88,55 @@ def webhooks_page(request: Request):
     )
 
 
-# ----------------- WOOCOMMERCE ENDPOINTLERİ -----------------
+# ----------------- WOO ENDPOINTLERİ -----------------
 @app.get("/woo/products")
 def woo_products():
     return woo_api.get_woo_products()
 
 
+# -------- GERÇEK WOO API PAGINATION (TAVSİYE EDİLEN) --------
 @app.get("/woo/products/page/{page}")
-def woo_products_page(page: int):
+def woo_products_page(page: int, per_page: int = 50):
     """
-    Dashboard tablosu için sayfalı ürün listesi
+    WooCommerce ürünlerini native pagination ile çeker.
+    Tek seferde *gerçek* WooCommerce sayfası geliyor.
+    Dashboard bu endpoint’i kullanır.
     """
+
     try:
-        per_page = 20
-        all_products = woo_api.get_woo_products()
+        url = f"{woo_api.WC_URL}/wp-json/wc/v3/products"
+        params = {
+            "page": page,
+            "per_page": per_page
+        }
 
-        total = len(all_products)
-        total_pages = (total + per_page - 1) // per_page or 1
+        response = requests.get(url, params=params, auth=(woo_api.WC_KEY, woo_api.WC_SECRET))
+        items = response.json()
 
-        if page < 1 or page > total_pages:
-            return {"error": "Geçersiz sayfa"}
-
-        start = (page - 1) * per_page
-        end = start + per_page
+        total_pages = int(response.headers.get("X-WP-TotalPages", 1))
+        total_items = int(response.headers.get("X-WP-Total", len(items)))
 
         return {
-            "total": total,
-            "total_pages": total_pages,
             "page": page,
             "per_page": per_page,
-            "items": all_products[start:end],
+            "total_pages": total_pages,
+            "total_items": total_items,
+            "items": items,
         }
 
     except Exception as e:
         return {"error": str(e)}
 
 
+
 @app.get("/woo/update_stock/{product_id}/{quantity}")
 def update_woo_stock(product_id: int, quantity: int):
-    """
-    Dashboard'taki 'Kaydet' butonu Woo stok güncellemesi için burayı kullanıyor.
-    """
     return woo_api.update_stock(product_id, quantity)
 
 
-# ----------------- MANUEL SYNC (Woo -> Bol hazırlık) -----------------
+# ----------------- MANUEL SYNC -----------------
 @app.get("/sync")
 def sync_now():
-    """
-    Sync Now butonu burayı çağırıyor.
-    Şimdilik sadece Woo'dan ürün sayısını çekip last_sync_time güncelliyor.
-    Bol Retailer API aktif olunca burada Bol stok güncellemesi açılacak.
-    """
     global last_sync_time
 
     try:
@@ -159,7 +154,8 @@ def sync_now():
         return {"status": "error", "message": str(e)}
 
 
-# ----------------- BOL.COM ENDPOINTLERİ -----------------
+
+# ----------------- BOL ENDPOINTLERİ -----------------
 @app.get("/bol/products")
 def bol_products():
     return bol_api.get_bol_products()
@@ -170,33 +166,31 @@ def bol_test_token():
     return bol_api.get_access_token()
 
 
-# ----------------- WEBHOOK LOG JSON API -----------------
+
+# ----------------- WEBHOOK JSON API -----------------
 @app.get("/webhooks/logs")
-def get_webhook_logs(limit: int = 100):
-    """
-    İstersen ileride frontend'ten de JSON olarak webhook loglarını çekebilirsin.
-    Şu an webhooks.html içindeki tablo read_webhook_logs() fonksiyonunu kullanıyor.
-    """
+def get_webhook_logs(limit: int = 200):
     logs = read_webhook_logs(limit)
     return {"logs": logs}
 
 
-# ----------------- WOO → BOL WEBHOOK (LOG İLE) -----------------
+
+# ----------------- WOO → BOL WEBHOOK -----------------
 @app.post("/webhook/woo")
 async def woo_webhook(data: dict):
     """
-    WooCommerce webhook buraya POST atar.
-    Hem log kaydediyoruz, hem de (mümkün olduğunda) Bol stok güncellemesi burada yapılacak.
+    WooCommerce bu endpoint'e POST gönderir.
+    Biz burada hem log kaydediyoruz hem de Bol senkronu tetikleyebiliriz.
     """
 
     product_id = data.get("id")
     stock = data.get("stock_quantity")
 
-    # 1) LOG KAYDI
+    # ---- LOG KAYDI ----
     log_entry = {
         "timestamp": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
         "source": "woocommerce",
-        "event": "stock_update",
+        "event": "product.updated",
         "product_id": product_id,
         "stock": stock,
         "raw": data,
@@ -205,14 +199,14 @@ async def woo_webhook(data: dict):
     try:
         with open("webhook_logs.jsonl", "a") as f:
             f.write(json.dumps(log_entry) + "\n")
-    except Exception as e:
-        print("Webhook log yazılamadı:", e)
+    except:
+        pass
 
-    # 2) Veri eksikse hemen dön
-    if not product_id or stock is None:
-        return {"error": "Missing data"}
+    # Veri eksikse dön
+    if not product_id:
+        return {"error": "Missing product_id"}
 
-    # 3) (Şimdilik) Bol güncelleme denemesi - Retailer API tamamen açılınca netleştireceğiz
+    # Bol stok güncelle (API aktif olduğunda)
     try:
         bol_api.update_bol_stock(product_id, stock)
     except Exception as e:
