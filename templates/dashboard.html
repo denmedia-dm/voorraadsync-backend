@@ -1,7 +1,10 @@
 {% extends "base.html" %}
 {% block content %}
+
 <h1>{{ data.title }}</h1>
-<p>Total ürün: {{ data.total_products }}</p>
-<p>Düşük stok: {{ data.low_stock }}</p>
-<p>Son senkron: {{ data.last_sync }}</p>
+
+<p><strong>Toplam ürün:</strong> {{ data.total_products }}</p>
+<p><strong>Düşük stok:</strong> {{ data.low_stock }}</p>
+<p><strong>Son senkron:</strong> {{ data.last_sync }}</p>
+
 {% endblock %}
