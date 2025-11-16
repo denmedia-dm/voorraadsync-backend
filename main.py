@@ -25,6 +25,37 @@ def home():
 # -------------------------------------------------
 # DASHBOARD
 # -------------------------------------------------
+@app.get("/woo/products/page/{page}")
+def woo_products_page(page: int):
+    """
+    WooCommerce ürünlerini sayfalı şekilde döner
+    """
+    try:
+        per_page = 20  # her sayfada 20 ürün göster
+
+        all_products = woo_api.get_woo_products()
+
+        total = len(all_products)
+        total_pages = (total + per_page - 1) // per_page
+
+        # sayfa aralığı kontrolü
+        if page < 1 or page > total_pages:
+            return {"error": "Geçersiz sayfa"}
+
+        start = (page - 1) * per_page
+        end = start + per_page
+
+        return {
+            "total": total,
+            "total_pages": total_pages,
+            "page": page,
+            "per_page": per_page,
+            "items": all_products[start:end]
+        }
+
+    except Exception as e:
+        return {"error": str(e)}
+
 @app.get("/dashboard", response_class=HTMLResponse)
 def dashboard(request: Request):
     global last_sync_time
