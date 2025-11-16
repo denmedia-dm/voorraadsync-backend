@@ -9,6 +9,9 @@ app = FastAPI()
 
 templates = Jinja2Templates(directory="templates")
 
+@app.get("/")
+def home():
+    return {"status": "running", "message": "VoorraadSync API actief 🎯"}
 
 @app.get("/dashboard", response_class=HTMLResponse)
 def dashboard(request: Request):
@@ -23,15 +26,8 @@ def dashboard(request: Request):
         "dashboard.html",
         {"request": request, "data": data}
     )
-    
-app = FastAPI()
-
-@app.get("/")
-def home():
-    return {"status": "running", "message": "VoorraadSync API actief 🎯"}
 
 # --- WooCommerce Endpoints ---
-
 @app.get("/woo/products")
 def woo_products():
     return woo_api.get_woo_products()
@@ -40,9 +36,7 @@ def woo_products():
 def update_woo_stock(product_id: int, quantity: int):
     return woo_api.update_stock(product_id, quantity)
 
-
 # --- Bol.com Endpoints ---
-
 @app.get("/bol/products")
 def bol_products():
     return bol_api.get_bol_products()
