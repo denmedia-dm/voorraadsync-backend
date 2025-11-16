@@ -36,7 +36,6 @@
     margin-top: 4px;
 }
 
-
 /* ------------ Toolbar ------------- */
 
 .toolbar {
@@ -58,10 +57,10 @@
 
 .btn-sync {
     padding: 12px 20px;
-    background: #059669;
     border-radius: 999px;
     color: white;
     font-weight: 600;
+    background: #059669;
     border: none;
     cursor: pointer;
     display: inline-flex;
@@ -73,17 +72,24 @@
     background: #047857;
 }
 
+.btn-blue {
+    background: #2563eb;
+}
 
-/* -------------- Table -------------- */
+.btn-blue:hover {
+    background: #1d4ed8;
+}
+
+/* ---------- TABLE (Desktop) ---------- */
 
 .table-container {
     width: 100%;
-    overflow-x: auto; /* 🔥 Mobil kaydırılabilir tablo */
+    overflow-x: auto;
 }
 
 table {
     width: 100%;
-    min-width: 900px; /* Mobilde kaydırılabilir alan yaratır */
+    min-width: 900px;
     border-collapse: collapse;
     background: white;
     border-radius: 12px;
@@ -109,9 +115,6 @@ tr:hover {
     font-weight: bold;
 }
 
-
-/* ------------ Inputs & Buttons ------------- */
-
 input[type=number] {
     width: 70px;
     padding: 7px;
@@ -119,7 +122,7 @@ input[type=number] {
     border: 1px solid #d1d5db;
 }
 
-button.btn-save {
+.btn-save {
     padding: 6px 12px;
     border-radius: 8px;
     border: none;
@@ -129,57 +132,70 @@ button.btn-save {
     cursor: pointer;
 }
 
-button.btn-save:hover {
-    background: #4338ca;
-}
-
-
-/* -------- Pagination Mobile Fix -------- */
-
-.pagination-box {
-    display: flex;
-    justify-content: center;
-    gap: 12px;
-    margin: 18px 0;
-}
-
-.pagination-box button {
-    padding: 8px 14px;
-    border-radius: 8px;
-}
-
-
-/* -------------- Mobile Breakpoints -------------- */
+/* ---------- MOBILE ONLY CARD STYLE ---------- */
 
 @media (max-width: 768px) {
-    
-    .card-value {
-        font-size: 20px;
+    .table-container {
+        display: none;
     }
 
-    .toolbar {
+    .mobile-list {
+        display: block;
+    }
+
+    .mobile-card {
+        background: white;
+        padding: 14px;
+        border-radius: 14px;
+        margin-bottom: 12px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+
+    .mobile-top {
+        display: flex;
         flex-direction: column;
-        align-items: stretch;
+        gap: 4px;
     }
 
-    .btn-sync {
+    .mobile-title {
+        font-size: 16px;
+        font-weight: 700;
+    }
+
+    .mobile-sku {
+        font-size: 13px;
+        color: #6b7280;
+    }
+
+    .mobile-detail {
+        display: none;
+        margin-top: 12px;
+    }
+
+    .detail-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 8px;
+    }
+
+    .mobile-save {
         width: 100%;
-        justify-content: center;
+        padding: 10px;
+        background: #4f46e5;
+        color: white;
+        border-radius: 8px;
+        border: none;
+        font-weight: 600;
     }
+}
 
-    .search-box input {
-        width: 100%;
-    }
-
-    /* Kaydet butonu mobilde biraz daha büyük */
-    button.btn-save {
-        padding: 8px 14px;
-        font-size: 14px;
-    }
-
+/* Desktop'ta mobil kartlar gizli */
+@media (min-width: 769px) {
+    .mobile-list { display: none; }
 }
 
 </style>
+
 
 <div class="page">
 
@@ -204,185 +220,190 @@ button.btn-save:hover {
     <!-- SEARCH + SYNC -->
     <div class="toolbar">
         <div class="search-box">
-            <input 
-                type="text" 
-                id="searchInput"
-                placeholder="Ürün adı veya SKU ara..."
-                onkeyup="filterTable()"
-            >
+            <input id="searchInput" type="text" placeholder="Ürün adı veya SKU ara..." onkeyup="filterResults()">
         </div>
 
         <button class="btn-sync" onclick="syncNow()">🔄 SYNC NOW</button>
-        <a href="/export/csv" class="btn-sync" style="background:#2563eb;">
-    📥 CSV İndir
-</a>
+
+        <a href="/export/csv" class="btn-sync btn-blue">📥 CSV İndir</a>
     </div>
 
-    <!-- TABLE -->
-<div class="table-container">
-    <table id="productsTable">
-        <thead>
-            <tr>
-                <th>ID</th><th>Ürün Adı</th><th>SKU</th>
-                <th>Stok</th><th>Fiyat (€)</th>
-                <th>Durum</th><th>Stok G.</th>
-            </tr>
-        </thead>
+    <!-- DESKTOP TABLE -->
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th><th>Ürün Adı</th><th>SKU</th>
+                    <th>Stok</th><th>Fiyat (€)</th><th>Durum</th><th>Stok G.</th>
+                </tr>
+            </thead>
+            <tbody id="product-table"></tbody>
+        </table>
+    </div>
 
-        <!-- JS BURAYA ÜRÜN BASACAK -->
-        <tbody id="product-table">
-        </tbody>
-    </table>
-</div>
+    <!-- MOBILE PRODUCT LIST -->
+    <div class="mobile-list" id="mobile-list"></div>
+
     <!-- PAGINATION -->
-    <div style="margin-top:20px; display:flex; gap:10px; align-items:center;">
-        <button onclick="prevPage()" style="padding:6px 12px;">⬅ Önceki</button>
+    <div style="margin-top:20px; display:flex; justify-content:center; gap:10px; align-items:center;">
+        <button onclick="prevPage()">⬅ Önceki</button>
         <span id="page-info" style="font-weight:bold;">Sayfa 1 / 1</span>
-        <button onclick="nextPage()" style="padding:6px 12px;">Sonraki ➡</button>
+        <button onclick="nextPage()">Sonraki ➡</button>
     </div>
+
 </div>
+
 
 <script>
 let currentPage = 1;
 let totalPages = 1;
+let currentItems = [];
 
-// SAYFA YÜKLEME
+/* ============================
+   SAYFA YÜKLEME
+============================ */
 function loadPage(page) {
     fetch(`/woo/products/page/${page}`)
-        .then(res => res.json())
+        .then(r => r.json())
         .then(data => {
 
             currentPage = data.page;
             totalPages = data.total_pages;
+            currentItems = data.items;
 
             document.getElementById("page-info").innerText =
                 `Sayfa ${currentPage} / ${totalPages}`;
 
-            const tbody = document.getElementById("product-table");
-            tbody.innerHTML = "";
-
-            data.items.forEach(p => {
-                tbody.innerHTML += `
-                    <tr>
-                        <td>${p.id}</td>
-                        <td>${p.name}</td>
-                        <td>${p.sku}</td>
-                        <td class="${(p.stock_quantity ?? 9999) < 5 ? 'low-stock' : ''}">
-                            ${p.stock_quantity ?? '-'}
-                        </td>
-                        <td>${p.regular_price ?? '-'}</td>
-                        <td>${p.status}</td>
-                        <td>
-                            <input type="number" id="stock_${p.id}" 
-                                   value="${p.stock_quantity ?? 0}">
-                            <button onclick="updateStock(${p.id})">Kaydet</button>
-                        </td>
-                    </tr>
-                `;
-            });
+            loadDesktopTable();
+            loadMobileCards();
         });
 }
 
-function nextPage() {
-    if (currentPage < totalPages) loadPage(currentPage + 1);
+/* ============================
+   DESKTOP TABLO ÇİZİMİ
+============================ */
+function loadDesktopTable() {
+    const tbody = document.getElementById("product-table");
+    tbody.innerHTML = "";
+
+    currentItems.forEach(p => {
+        tbody.innerHTML += `
+            <tr>
+                <td>${p.id}</td>
+                <td>${p.name}</td>
+                <td>${p.sku ?? "-"}</td>
+                <td class="${(p.stock_quantity ?? 9999) < 5 ? 'low-stock' : ''}">
+                    ${p.stock_quantity ?? "-"}
+                </td>
+                <td>${p.regular_price ?? "-"}</td>
+                <td>${p.status}</td>
+                <td>
+                    <input type="number" id="qty-${p.id}" value="${p.stock_quantity ?? 0}">
+                    <button class="btn-save" onclick="updateStock(${p.id})">Kaydet</button>
+                </td>
+            </tr>
+        `;
+    });
 }
 
-function prevPage() {
-    if (currentPage > 1) loadPage(currentPage - 1);
+/* ============================
+   MOBILE KART ÇİZİMİ
+============================ */
+function loadMobileCards() {
+    const box = document.getElementById("mobile-list");
+    box.innerHTML = "";
+
+    currentItems.forEach(p => {
+        box.innerHTML += `
+            <div class="mobile-card" onclick="toggleCard('${p.id}')">
+
+                <div class="mobile-top">
+                    <div class="mobile-title">${p.name}</div>
+                    <div class="mobile-sku">SKU: ${p.sku ?? "-"}</div>
+                </div>
+
+                <div id="detail-${p.id}" class="mobile-detail">
+                    <div class="detail-row">
+                        <strong>Stok:</strong>
+                        <input type="number" id="mstock-${p.id}" value="${p.stock_quantity ?? 0}">
+                    </div>
+
+                    <div class="detail-row">
+                        <strong>Fiyat:</strong> €${p.regular_price ?? "-"}
+                    </div>
+
+                    <button class="mobile-save" onclick="event.stopPropagation(); updateStock(${p.id})">
+                        Kaydet
+                    </button>
+                </div>
+
+            </div>
+        `;
+    });
 }
 
-// STOK GÜNCELLEME
+function toggleCard(id) {
+    let box = document.getElementById("detail-" + id);
+    box.style.display = box.style.display === "block" ? "none" : "block";
+}
+
+/* ============================
+   PAGINATION
+============================ */
+function nextPage() { if (currentPage < totalPages) loadPage(currentPage + 1); }
+function prevPage() { if (currentPage > 1) loadPage(currentPage - 1); }
+
+/* ============================
+   STOK GÜNCELLEME
+============================ */
 function updateStock(id) {
-    let qty = document.getElementById("stock_" + id).value;
+
+    let qty = document.getElementById("qty-" + id)?.value ??
+              document.getElementById("mstock-" + id)?.value;
 
     fetch(`/woo/update_stock/${id}/${qty}`)
-        .then(res => res.json())
+        .then(r => r.json())
         .then(() => {
             alert("Stok güncellendi ✔");
             loadPage(currentPage);
         });
 }
 
-// SYNC NOW
+/* ============================
+   SYNC NOW
+============================ */
 function syncNow() {
     fetch("/sync")
-        .then(res => res.json())
-        .then(data => {
-            alert("Senkron: " + data.count + " ürün ✔");
-            loadPage(currentPage);
+        .then(r => r.json())
+        .then(d => {
+            alert("Senkron tamamlandı ✔ (" + d.count + " ürün)");
         });
 }
 
-// ARAMA FİLTRESİ
-function filterTable() {
+/* ============================
+   ARAMA FİLTRESİ
+============================ */
+function filterResults() {
     const search = document.getElementById("searchInput").value.toLowerCase();
+
     const rows = document.querySelectorAll("#product-table tr");
+    const cards = document.querySelectorAll(".mobile-card");
 
     rows.forEach(row => {
-        const name = row.children[1].innerText.toLowerCase();
-        const sku = row.children[2].innerText.toLowerCase();
+        let name = row.children[1].innerText.toLowerCase();
+        let sku = row.children[2].innerText.toLowerCase();
+        row.style.display = (name.includes(search) || sku.includes(search)) ? "" : "none";
+    });
 
-        row.style.display =
-            name.includes(search) || sku.includes(search)
-                ? ""
-                : "none";
+    cards.forEach(card => {
+        let title = card.querySelector(".mobile-title").innerText.toLowerCase();
+        let sku = card.querySelector(".mobile-sku").innerText.toLowerCase();
+        card.style.display =
+            (title.includes(search) || sku.includes(search)) ? "" : "none";
     });
 }
 
-// İLK SAYFA YÜKLE
-loadPage(1);
-</script>
-
-<script>
-let currentPage = 1;
-let totalPages = 1;
-
-function loadPage(page) {
-    fetch(`/woo/products/page/${page}`)
-        .then(res => res.json())
-        .then(data => {
-
-            currentPage = data.page;
-            totalPages = data.total_pages;
-
-            document.getElementById("page-info").innerText =
-                `Sayfa ${currentPage} / ${totalPages}`;
-
-            const tbody = document.getElementById("product-body");
-            tbody.innerHTML = "";
-
-            data.items.forEach(p => {
-                tbody.innerHTML += `
-                    <tr>
-                        <td>${p.id}</td>
-                        <td>${p.name}</td>
-                        <td>${p.sku ?? "-"}</td>
-                        <td>${p.stock_quantity ?? "-"}</td>
-                        <td>${p.regular_price ?? "-"}</td>
-                        <td>${p.status}</td>
-                        <td>
-                            <input type="number" id="qty-${p.id}" value="${p.stock_quantity ?? 0}">
-                            <button class="btn-save" onclick="updateStock(${p.id})">Kaydet</button>
-                        </td>
-                    </tr>
-                `;
-            });
-        });
-}
-
-function nextPage() {
-    if (currentPage < totalPages) {
-        loadPage(currentPage + 1);
-    }
-}
-
-function prevPage() {
-    if (currentPage > 1) {
-        loadPage(currentPage - 1);
-    }
-}
-
-// İlk sayfa yükle
+/* İlk yükleme */
 loadPage(1);
 </script>
 
