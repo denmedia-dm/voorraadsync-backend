@@ -265,4 +265,70 @@ function filterTable() {
 }
 </script>
 
+<script>
+let currentPage = 1;
+let totalPages = 1;
+
+// Sayfa değiştir
+function loadPage(page) {
+    fetch(`/woo/products/page/${page}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.error) {
+                alert(data.error);
+                return;
+            }
+
+            currentPage = data.page;
+            totalPages = data.total_pages;
+
+            document.getElementById("page-info").innerText =
+                `Sayfa ${currentPage} / ${totalPages}`;
+
+            // tabloyu yenile
+            const tbody = document.getElementById("product-table");
+            tbody.innerHTML = "";
+
+            data.items.forEach(p => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${p.id}</td>
+                        <td>${p.name}</td>
+                        <td>${p.sku}</td>
+                        <td>${p.stock_quantity ?? '-'}</td>
+                        <td>${p.regular_price ?? '-'}</td>
+                        <td>${p.status}</td>
+                        <td>
+                            <input type="number" id="stock_${p.id}" value="${p.stock_quantity ?? 0}" />
+                            <button onclick="updateStock(${p.id})">Kaydet</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        });
+}
+
+// Butonlar
+function nextPage() {
+    if (currentPage < totalPages)
+        loadPage(currentPage + 1);
+}
+
+function prevPage() {
+    if (currentPage > 1)
+        loadPage(currentPage - 1);
+}
+
+// İlk yükleme
+loadPage(1);
+</script>
+
+<div style="margin-top:20px; display:flex; gap:10px; align-items:center;">
+    <button onclick="prevPage()" style="padding:6px 12px;">⬅ Önceki</button>
+
+    <span id="page-info" style="font-weight:bold;">Sayfa 1 / 1</span>
+
+    <button onclick="nextPage()" style="padding:6px 12px;">Sonraki ➡</button>
+</div>
+
 {% endblock %}
