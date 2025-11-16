@@ -1,7 +1,28 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.templating import Jinja2Templates
+from fastapi.responses import HTMLResponse
+
 import woo_api
 import bol_api
 
+app = FastAPI()
+
+templates = Jinja2Templates(directory="templates")
+
+@app.get("/dashboard", response_class=HTMLResponse)
+def dashboard(request: Request):
+    data = {
+        "title": "VoorraadSync Dashboard",
+        "total_products": 0,
+        "low_stock": 0,
+        "last_sync": "Henüz senkron yapılmadı"
+    }
+
+    return templates.TemplateResponse(
+        "dashboard.html",
+        {"request": request, "data": data}
+    )
+    
 app = FastAPI()
 
 @app.get("/")
