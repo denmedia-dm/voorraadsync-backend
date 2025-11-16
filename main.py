@@ -37,24 +37,30 @@ def dashboard(request: Request):
         total_products = len(products)
 
         # stok adeti 5’ten düşük olan ürünleri say
-        low_stock = sum(1 for p in products if int(p.get("stock_quantity", 9999)) < 5)
+        low_stock = sum(
+            1 for p in products
+            if p.get("stock_quantity") is not None
+            and int(p.get("stock_quantity")) < 5
+        )
 
-        # senkron zamanını güncelle
-        last_sync_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        # Eğer daha önce gerçek sync yapılmadıysa dashboard açılışını da senkron zamanı olarak göster
+        if last_sync_time is None:
+            last_sync_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     except Exception as e:
         print("Dashboard error:", e)
         products = []
         total_products = 0
         low_stock = 0
-        last_sync_time = "WooCommerce bağlantı hatası"
+        if last_sync_time is None:
+            last_sync_time = "WooCommerce bağlantı hatası"
 
     data = {
         "title": "VoorraadSync Dashboard",
         "total_products": total_products,
         "low_stock": low_stock,
         "last_sync": last_sync_time,
-        "products": products
+        "products": products,
     }
 
     return templates.TemplateResponse(
@@ -73,7 +79,45 @@ def woo_products():
 
 @app.get("/woo/update_stock/{product_id}/{quantity}")
 def update_woo_stock(product_id: int, quantity: int):
+    """
+    WooCommerce ürün stok güncelleme
+    Dashboard'taki 'Kaydet' butonu buraya istek atıyor.
+    """
     return woo_api.update_stock(product_id, quantity)
+
+
+# -------------------------------------------------
+# MANUEL SYNC (Woo -> Bol)
+# -------------------------------------------------
+@app.get("/sync")
+def sync_now():
+    """
+    Sync Now butonu bu endpoint'i çağırır.
+    Şu an sadece Woo'dan ürünleri çekip kaç ürün olduğunu döndürüyor.
+    Bol Retailer API aktif olunca burada Bol stok güncellemesi açılır.
+    """
+    global last_sync_time
+
+    try:
+        products = woo_api.get_woo_products()
+
+        # Bol API aktif olunca bu kısmı açacağız:
+        #
+        # for p in products:
+        #     if p.get("id") and p.get("stock_quantity") is not None:
+        #         bol_api.update_bol_stock(p["id"], p["stock_quantity"])
+
+        last_sync_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        return {
+            "status": "ok",
+            "message": "Senkron tamamlandı",
+            "count": len(products),
+            "last_sync": last_sync_time
+        }
+
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 
 # -------------------------------------------------
@@ -94,6 +138,10 @@ def bol_test_token():
 # -------------------------------------------------
 @app.post("/webhook/woo")
 async def woo_webhook(data: dict):
+    """
+    WooCommerce webhook buraya POST atar.
+    Ürün ID ve stok bilgisi ile Bol stok güncellemesi yapılır.
+    """
     product_id = data.get("id")
     stock = data.get("stock_quantity")
 
