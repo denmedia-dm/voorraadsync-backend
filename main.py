@@ -213,3 +213,49 @@ async def woo_webhook(data: dict):
         print("Bol update error:", e)
 
     return {"status": "ok"}
+
+import csv
+from fastapi.responses import StreamingResponse
+from io import StringIO
+
+@app.get("/export/csv")
+def export_csv():
+    """
+    WooCommerce ürünlerini CSV olarak export eder.
+    """
+    try:
+        products = woo_api.get_woo_products()
+
+        # CSV buffer
+        csv_buffer = StringIO()
+        writer = csv.writer(csv_buffer)
+
+        # CSV header
+        writer.writerow([
+            "ID", "Name", "SKU", "Stock", "Price", "Status", "Type"
+        ])
+
+        # Data rows
+        for p in products:
+            writer.writerow([
+                p.get("id"),
+                p.get("name"),
+                p.get("sku"),
+                p.get("stock_quantity"),
+                p.get("price"),
+                p.get("status"),
+                p.get("type"),
+            ])
+
+        csv_buffer.seek(0)
+
+        return StreamingResponse(
+            csv_buffer,
+            media_type="text/csv",
+            headers={
+                "Content-Disposition": "attachment; filename=woocommerce_products.csv"
+            }
+        )
+
+    except Exception as e:
+        return {"error": str(e)}
