@@ -25,6 +25,10 @@ def update_woo_stock(product_id: int, quantity: int):
 def bol_products():
     return bol_api.get_bol_products()
 
+@app.get("/bol/test_token")
+def bol_test_token():
+    return bol_api.get_access_token()
+
 @app.post("/webhook/woo")
 async def woo_webhook(data: dict):
     product_id = data.get("id")
