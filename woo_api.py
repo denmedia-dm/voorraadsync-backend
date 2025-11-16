@@ -15,28 +15,29 @@ WC_SECRET = CONFIG["woocommerce"]["consumer_secret"]
 # -------------------------------------------------------
 def get_woo_products():
     """
-    WooCommerce tüm ürünleri (sayfa sayfa) çeker.
+    WooCommerce'teki sadece yayınlanmış gerçek ürünleri listeler
     """
+    url = f"{WC_URL}/wp-json/wc/v3/products"
+    params = {
+        "status": "publish",       # sadece canlı ürünler
+        "per_page": 100,           # WooCommerce max 100 destekliyor
+    }
+
     all_products = []
     page = 1
-    per_page = 100  # en yüksek limit
 
     while True:
-        url = f"{WC_URL}/wp-json/wc/v3/products?page={page}&per_page={per_page}"
-        response = requests.get(url, auth=(WC_KEY, WC_SECRET))
-
+        params["page"] = page
+        response = requests.get(url, auth=(WC_KEY, WC_SECRET), params=params)
         products = response.json()
 
-        if not products:
-            break  # ürün bitti
+        if not products or len(products) == 0:
+            break
 
-        all_products.extend(products)
-
-        # sayfa bilgisi bitti mi kontrol
-        if "X-WP-TotalPages" in response.headers:
-            total_pages = int(response.headers["X-WP-TotalPages"])
-            if page >= total_pages:
-                break
+        # Concept / parent / stok olmayan ürünleri temizleyelim
+        for p in products:
+            if p.get("type") in ["simple", "variation"] and p.get("status") == "publish":
+                all_products.append(p)
 
         page += 1
 
