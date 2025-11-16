@@ -15,11 +15,30 @@ def home():
 
 @app.get("/dashboard", response_class=HTMLResponse)
 def dashboard(request: Request):
+
+    # WooCommerce ürünlerini çek
+    try:
+        products = woo_api.get_woo_products()
+
+        # ürün listesi array ise:
+        total_products = len(products)
+
+        # stok adeti 5’ten düşük olanları say
+        low_stock = len([p for p in products if p.get("stock_quantity", 9999) < 5])
+
+        last_sync = "Henüz senkron yapılmadı"
+
+    except Exception as e:
+        print("Dashboard error:", e)
+        total_products = 0
+        low_stock = 0
+        last_sync = "WooCommerce bağlantı hatası"
+
     data = {
         "title": "VoorraadSync Dashboard",
-        "total_products": 0,
-        "low_stock": 0,
-        "last_sync": "Henüz senkron yapılmadı"
+        "total_products": total_products,
+        "low_stock": low_stock,
+        "last_sync": last_sync
     }
 
     return templates.TemplateResponse(
