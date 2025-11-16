@@ -3,111 +3,165 @@
 {% block content %}
 
 <style>
-    .container {
+    .page {
         max-width: 1200px;
-        margin: auto;
-        margin-top: 40px;
-        padding: 20px;
+        margin: 30px auto;
+        padding: 0 15px;
+    }
+
+    .cards {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+        margin-bottom: 30px;
+    }
+
+    .card {
         background: white;
-        border-radius: 20px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+        border-radius: 16px;
+        padding: 18px 20px;
+        box-shadow: 0 4px 18px rgba(0,0,0,0.06);
     }
 
-    h1 {
-        font-size: 42px;
-        font-weight: 800;
-        margin-bottom: 40px;
+    .card-title {
+        font-size: 14px;
+        color: #6b7280;
+        margin-bottom: 5px;
     }
 
-    .stat {
-        font-size: 24px;
-        margin-bottom: 15px;
-    }
-
-    .stat-label {
+    .card-value {
+        font-size: 26px;
         font-weight: 700;
+        color: #111827;
+    }
+
+    .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        margin: 10px 0 20px 0;
+        gap: 10px;
+    }
+
+    .search-box input {
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: 1px solid #d1d5db;
+        min-width: 220px;
+    }
+
+    .btn-sync {
+        padding: 10px 18px;
+        background: #059669;
+        border-radius: 999px;
+        color: white;
+        border: none;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .btn-sync:hover {
+        background: #047857;
     }
 
     table {
         width: 100%;
         border-collapse: collapse;
-        margin-top: 40px;
-        border-radius: 10px;
+        border-radius: 12px;
         overflow: hidden;
-        font-size: 15px;
+        background: white;
+        box-shadow: 0 4px 18px rgba(0,0,0,0.04);
+        font-size: 14px;
     }
 
     thead {
         background: #f3f4f6;
-        font-weight: bold;
     }
 
     th, td {
-        padding: 12px 10px;
+        padding: 10px 8px;
         border-bottom: 1px solid #e5e7eb;
+        text-align: left;
     }
 
     tr:hover {
-        background: #fafafa;
+        background: #f9fafb;
     }
 
     .low-stock {
-        color: red;
-        font-weight: bold;
-    }
-
-    button {
-        padding: 6px 10px;
-        cursor: pointer;
-        border: none;
-        background: #4f46e5;
-        color: white;
-        border-radius: 6px;
-    }
-
-    button:hover {
-        background: #4338ca;
+        color: #b91c1c;
+        font-weight: 700;
     }
 
     input[type=number] {
         width: 60px;
         padding: 5px;
-        border: 1px solid #ccc;
         border-radius: 6px;
+        border: 1px solid #d1d5db;
     }
 
-    @media (max-width: 768px) {
-        table { font-size: 13px; }
-        h1 { font-size: 32px; }
-        .stat { font-size: 20px; }
+    button.btn-save {
+        padding: 6px 10px;
+        border-radius: 6px;
+        border: none;
+        background: #4f46e5;
+        color: white;
+        font-size: 12px;
+        cursor: pointer;
+        margin-left: 4px;
+    }
+
+    button.btn-save:hover {
+        background: #4338ca;
+    }
+
+    @media (max-width: 900px) {
+        .cards {
+            grid-template-columns: 1fr;
+        }
+
+        table {
+            font-size: 13px;
+        }
     }
 </style>
 
+<div class="page">
 
-<div class="container">
-
-    <h1>{{ data.title }}</h1>
-
-    <div class="stat">
-        <span class="stat-label">Toplam ürün:</span>
-        {{ data.total_products }}
+    <div class="cards">
+        <div class="card">
+            <div class="card-title">Toplam ürün</div>
+            <div class="card-value">{{ data.total_products }}</div>
+        </div>
+        <div class="card">
+            <div class="card-title">Düşük stok (&lt; 5)</div>
+            <div class="card-value">{{ data.low_stock }}</div>
+        </div>
+        <div class="card">
+            <div class="card-title">Son senkron</div>
+            <div class="card-value" style="font-size:18px;">
+                {{ data.last_sync }}
+            </div>
+        </div>
     </div>
 
-    <div class="stat">
-        <span class="stat-label">Düşük stok:</span>
-        {{ data.low_stock }}
+    <div class="toolbar">
+        <div class="search-box">
+            <input type="text" id="searchInput"
+                   placeholder="Ürün adı veya SKU ara..."
+                   onkeyup="filterTable()">
+        </div>
+
+        <button class="btn-sync" onclick="syncNow()">
+            🔄 SYNC NOW
+        </button>
     </div>
 
-    <div class="stat">
-        <span class="stat-label">Son senkron:</span>
-        {{ data.last_sync }}
-    </div>
-
-    <hr style="margin: 40px 0;">
-
-    <h2 style="margin-bottom: 20px; font-size: 28px;">Ürün Listesi</h2>
-
-    <table>
+    <table id="productsTable">
         <thead>
             <tr>
                 <th>ID</th>
@@ -128,13 +182,13 @@
                 <td>
                     {{ p.name }}
                     {% if p.type == "variation" %}
-                    <div style="font-size: 12px; color: #777;">(Varyasyon)</div>
+                    <div style="font-size: 11px; color: #6b7280;">(Varyasyon)</div>
                     {% endif %}
                 </td>
 
                 <td>{{ p.sku }}</td>
 
-                <td class="{% if p.stock_quantity|int < 5 %}low-stock{% endif %}">
+                <td class="{% if p.stock_quantity is not none and p.stock_quantity|int < 5 %}low-stock{% endif %}">
                     {{ p.stock_quantity }}
                 </td>
 
@@ -144,7 +198,7 @@
 
                 <td>
                     <input type="number" id="qty-{{ p.id }}" value="{{ p.stock_quantity }}">
-                    <button onclick="updateStock({{ p.id }})">Kaydet</button>
+                    <button class="btn-save" onclick="updateStock({{ p.id }})">Kaydet</button>
                 </td>
             </tr>
             {% endfor %}
@@ -155,7 +209,10 @@
 
 <script>
 function updateStock(productId) {
-    let qty = document.getElementById("qty-" + productId).value;
+    const qtyInput = document.getElementById("qty-" + productId);
+    if (!qtyInput) return;
+
+    const qty = qtyInput.value;
 
     fetch(`/woo/update_stock/${productId}/${qty}`)
         .then(res => res.json())
@@ -164,9 +221,47 @@ function updateStock(productId) {
             location.reload();
         })
         .catch(err => {
-            alert("Hata oluştu ❌");
             console.error(err);
+            alert("Stok güncellenirken hata oluştu ❌");
         });
+}
+
+function syncNow() {
+    fetch("/sync")
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === "ok") {
+                alert("Senkron tamamlandı ✔ (" + data.count + " ürün)");
+            } else {
+                alert("Senkron hatası: " + data.message);
+            }
+            location.reload();
+        })
+        .catch(err => {
+            console.error(err);
+            alert("Senkron sırasında hata oluştu ❌");
+        });
+}
+
+function filterTable() {
+    const input = document.getElementById("searchInput");
+    const filter = input.value.toLowerCase();
+    const table = document.getElementById("productsTable");
+    const trs = table.getElementsByTagName("tr");
+
+    for (let i = 1; i < trs.length; i++) { // 0 = header
+        const tds = trs[i].getElementsByTagName("td");
+        if (tds.length < 3) continue;
+
+        const nameText = (tds[1].innerText || "").toLowerCase();
+        const skuText  = (tds[2].innerText || "").toLowerCase();
+
+        if (nameText.indexOf(filter) > -1 || skuText.indexOf(filter) > -1) {
+            trs[i].style.display = "";
+        } else {
+            trs[i].style.display = "none";
+        }
+    }
 }
 </script>
 
