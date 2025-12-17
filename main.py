@@ -267,3 +267,53 @@ def export_csv():
 
     except Exception as e:
         return {"error": str(e)}
+
+@app.get("/reports/low-stock")
+def low_stock_report(threshold: int = 5):
+    """
+    Tüm WooCommerce ürünlerini tarar
+    Kritik ve uyarı stoklarını döner
+    """
+
+    critical = []
+    warning = []
+
+    page = 1
+    per_page = 100  # Woo max
+
+    while True:
+        result = woo_api.get_woo_products(page=page, per_page=per_page)
+
+        items = result.get("items", [])
+        if not items:
+            break
+
+        for p in items:
+            stock = p.get("stock_quantity")
+
+            if stock is None:
+                continue
+
+            stock = int(stock)
+
+            product_info = {
+                "id": p.get("id"),
+                "name": p.get("name"),
+                "sku": p.get("sku"),
+                "stock": stock
+            }
+
+            if stock == 0:
+                critical.append(product_info)
+            elif 0 < stock <= threshold:
+                warning.append(product_info)
+
+        page += 1
+
+    return {
+        "threshold": threshold,
+        "critical": critical,
+        "warning": warning,
+        "total_critical": len(critical),
+        "total_warning": len(warning)
+    }
