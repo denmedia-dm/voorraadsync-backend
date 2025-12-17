@@ -44,17 +44,19 @@ def dashboard(request: Request):
     global last_sync_time
 
     try:
-        # Dashboard sadece istatistik gösterir → ilk sayfayı çekiyoruz
+        # 1️⃣ WooCommerce toplam ürün sayısı (sadece ilk sayfa, hızlı)
         first_page = woo_api.get_woo_products(page=1, per_page=50)
 
         total_products = first_page.get("total_items", 0)
-        items = first_page.get("items", [])
 
-        # düşük stok
-        low_stock = sum(
-            1 for p in items
-            if p.get("stock_quantity") not in [None, ""] and int(p["stock_quantity"]) < 5
-        )
+        # 2️⃣ GERÇEK low-stock raporu (TÜM ürünlerden)
+        low_stock_response = requests.get(
+            request.url_for("low_stock_report"),
+            params={"threshold": 5}
+        ).json()
+
+        critical_stock = low_stock_response.get("total_critical", 0)
+        warning_stock = low_stock_response.get("total_warning", 0)
 
         if last_sync_time is None:
             last_sync_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -62,18 +64,25 @@ def dashboard(request: Request):
     except Exception as e:
         print("Dashboard error:", e)
         total_products = 0
-        low_stock = 0
+        critical_stock = 0
+        warning_stock = 0
         if last_sync_time is None:
             last_sync_time = "WooCommerce bağlantı hatası"
 
+    # 3️⃣ Dashboard’a gönderilen data
     data = {
         "title": "VoorraadSync Dashboard",
         "total_products": total_products,
-        "low_stock": low_stock,
+        "low_stock": critical_stock + warning_stock,
+        "critical_stock": critical_stock,
+        "warning_stock": warning_stock,
         "last_sync": last_sync_time,
     }
 
-    return templates.TemplateResponse("dashboard.html", {"request": request, "data": data})
+    return templates.TemplateResponse(
+        "dashboard.html",
+        {"request": request, "data": data}
+    )
 
 
 # ----------------- WEBHOOK PANEL -----------------
@@ -87,6 +96,53 @@ def webhooks_page(request: Request):
         {"request": request, "data": data, "logs": logs}
     )
 
+# ----------------- LOW STOCK REPORT -----------------
+@app.get("/reports/low-stock")
+def low_stock_report(threshold: int = 5):
+    """
+    Tüm WooCommerce ürünlerini tarar.
+    threshold altındaki stokları döner.
+    """
+
+    try:
+        critical = []  # stok = 0
+        warning = []   # stok 1–threshold
+
+        page = 1
+        per_page = 100
+
+        while True:
+            result = woo_api.get_woo_products(page=page, per_page=per_page)
+            items = result.get("items", [])
+
+            if not items:
+                break
+
+            for p in items:
+                stock = p.get("stock_quantity")
+
+                if stock is None:
+                    continue
+
+                stock = int(stock)
+
+                if stock == 0:
+                    critical.append(p)
+                elif stock <= threshold:
+                    warning.append(p)
+
+            page += 1
+
+        return {
+            "critical": critical,
+            "warning": warning,
+            "total_critical": len(critical),
+            "total_warning": len(warning),
+            "threshold": threshold
+        }
+
+    except Exception as e:
+        return {"error": str(e)}
 
 # ----------------- WOO ENDPOINTLERİ -----------------
 @app.get("/woo/products/page/{page}")
