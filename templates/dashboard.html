@@ -217,6 +217,57 @@ input[type=number] {
         </div>
     </div>
 
+    <!-- STOCK ALERTS -->
+<div id="stock-alerts" style="margin-bottom:20px;"></div>
+
+<script>
+fetch("/reports/low-stock")
+  .then(res => res.json())
+  .then(data => {
+    const box = document.getElementById("stock-alerts");
+
+    if (
+      data.total_critical === 0 &&
+      data.total_warning === 0
+    ) {
+      box.innerHTML = `
+        <div class="card">
+          ✅ Şu an riskli stok yok
+        </div>`;
+      return;
+    }
+
+    let html = `<div class="card">
+      <h3 style="margin-bottom:10px;">🔔 Stok Uyarıları</h3>
+    `;
+
+    if (data.total_critical > 0) {
+      html += `<strong style="color:#b91c1c;">🔴 Kritik (0 stok)</strong><ul>`;
+      data.critical.slice(0,5).forEach(p => {
+        html += `<li>
+          ${p.name} (${p.sku}) —
+          <strong>0</strong>
+        </li>`;
+      });
+      html += `</ul>`;
+    }
+
+    if (data.total_warning > 0) {
+      html += `<strong style="color:#d97706;">🟠 Düşük stok (&lt;5)</strong><ul>`;
+      data.warning.slice(0,5).forEach(p => {
+        html += `<li>
+          ${p.name} (${p.sku}) —
+          <strong>${p.stock_quantity}</strong>
+        </li>`;
+      });
+      html += `</ul>`;
+    }
+
+    html += `</div>`;
+    box.innerHTML = html;
+  });
+</script>
+
     <!-- SEARCH + SYNC -->
     <div class="toolbar">
         <div class="search-box">
