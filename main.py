@@ -110,6 +110,54 @@ def woo_products_page(page: int, per_page: int = 50):
 def update_woo_stock(product_id: int, quantity: int):
     return woo_api.update_stock(product_id, quantity)
 
+# ----------------- RAPORLAR -----------------
+@app.get("/reports/low-stock")
+def low_stock_report():
+    """
+    Stok < 5 olan ürünleri döner
+    - critical: 0–1
+    - warning: 2–4
+    """
+    try:
+        # İlk etapta performans için ilk 500 ürünü alıyoruz
+        result = woo_api.get_woo_products(page=1, per_page=500)
+        items = result.get("items", [])
+
+        critical = []
+        warning = []
+
+        for p in items:
+            stock = p.get("stock_quantity")
+
+            if stock is None:
+                continue
+
+            try:
+                stock = int(stock)
+            except:
+                continue
+
+            product_data = {
+                "id": p.get("id"),
+                "name": p.get("name"),
+                "sku": p.get("sku"),
+                "stock": stock,
+            }
+
+            if stock <= 1:
+                critical.append(product_data)
+            elif stock <= 4:
+                warning.append(product_data)
+
+        return {
+            "critical": critical,
+            "warning": warning,
+            "total_critical": len(critical),
+            "total_warning": len(warning),
+        }
+
+    except Exception as e:
+        return {"error": str(e)}
 
 # ----------------- MANUEL SYNC -----------------
 @app.get("/sync")
