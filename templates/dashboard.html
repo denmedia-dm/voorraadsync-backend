@@ -121,9 +121,20 @@ input[type=number] {
 
 <!-- STATS -->
 <div class="cards">
-    <div class="card"><div class="card-title">Toplam ürün</div><div class="card-value">{{ data.total_products }}</div></div>
-    <div class="card"><div class="card-title">Düşük stok (&lt;5)</div><div class="card-value">{{ data.low_stock }}</div></div>
-    <div class="card"><div class="card-title">Son senkron</div><div class="card-value" style="font-size:18px;">{{ data.last_sync }}</div></div>
+  <div class="card">
+    <div class="card-title">Toplam ürün</div>
+    <div class="card-value" id="stat-total">...</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Düşük stok (&lt; 5)</div>
+    <div class="card-value" id="stat-low">...</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Son senkron</div>
+    <div class="card-value" id="stat-sync" style="font-size:18px;">Yükleniyor...</div>
+  </div>
 </div>
 
 <!-- TOOLBAR -->
