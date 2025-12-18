@@ -373,3 +373,17 @@ def low_stock_report(threshold: int = 5):
         "total_critical": len(critical),
         "total_warning": len(warning)
     }
+# ----------------- BOL AUTH TEST -----------------
+@app.get("/bol/auth/test")
+def bol_auth_test():
+    try:
+        token = bol_api.get_access_token()
+        return {
+            "status": "ok",
+            "token_preview": token[:20] + "..."
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": str(e)
+        }

@@ -1,115 +1,47 @@
 import requests
 import json
-import base64
 import time
 
-# Load config
 with open("config.json") as f:
     CONFIG = json.load(f)
 
-CLIENT_ID = CONFIG["bol"]["client_id"]
-CLIENT_SECRET = CONFIG["bol"]["client_secret"]
+BOL_CLIENT_ID = CONFIG["bol"]["client_id"]
+BOL_CLIENT_SECRET = CONFIG["bol"]["client_secret"]
 
-# Cache
-access_token = None
-token_expiry = 0
+TOKEN_URL = "https://login.bol.com/token"
 
-def get_offer_id(product_id):
-    mapping = {
-        28577: "9116f20f-89e1-4e60-8600-f77fd0dde806"
-    }
-    return mapping.get(product_id)
-
-def update_bol_stock(product_id, quantity):
-    offer_id = get_offer_id(product_id)
-
-    if not offer_id:
-        return {"error": "Offer ID not found for this product"}
-
-    token = get_access_token()
-    if isinstance(token, dict):
-        return token
-
-    url = f"https://api.bol.com/retailer/offers/{offer_id}/stock"
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/vnd.retailer.v10+json",
-        "Accept": "application/vnd.retailer.v10+json"
-    }
-
-    data = {
-        "amount": quantity
-    }
-
-    response = requests.put(url, json=data, headers=headers)
-    return response.json()
+# Bellekte token tutacağız (şimdilik)
+_access_token = None
+_token_expires_at = 0
 
 def get_access_token():
     """
-    Haalt een OAuth access token op bij Bol.com
+    Bol.com access token alır.
+    Süresi dolmuşsa otomatik yeniler.
     """
-    global access_token, token_expiry
+    global _access_token, _token_expires_at
 
-    # Token hala geçerliyse tekrar alma
-    if access_token and time.time() < token_expiry:
-        return access_token
+    # Token hâlâ geçerliyse direkt dön
+    if _access_token and time.time() < _token_expires_at:
+        return _access_token
 
-    # Client ID + Secret → Base64
-    auth_string = f"{CLIENT_ID}:{CLIENT_SECRET}"
-    auth_encoded = base64.b64encode(auth_string.encode()).decode()
-
-    url = "https://api.bol.com/retailer/oauth/token"
-    headers = {
-        "Authorization": f"Basic {auth_encoded}",
-        "Content-Type": "application/x-www-form-urlencoded"
+    payload = {
+        "grant_type": "client_credentials"
     }
-    data = {"grant_type": "client_credentials"}
 
-    response = requests.post(url, headers=headers, data=data)
+    response = requests.post(
+        TOKEN_URL,
+        auth=(BOL_CLIENT_ID, BOL_CLIENT_SECRET),
+        data=payload
+    )
 
-    # Token alınamadıysa detaylı hata göster
     if response.status_code != 200:
-        return {
-            "error": "token_error",
-            "status": response.status_code,
-            "body": response.text
-        }
+        raise Exception(f"Bol token alınamadı: {response.text}")
 
-    json_data = response.json()
-    access_token = json_data["access_token"]
-    token_expiry = time.time() + json_data["expires_in"] - 30
+    data = response.json()
 
-    return access_token
+    _access_token = data["access_token"]
+    expires_in = data.get("expires_in", 300)
+    _token_expires_at = time.time() + expires_in - 30  # güvenli pay
 
-
-def get_bol_products():
-    """
-    Haalt producten op uit Bol API
-    """
-    token = get_access_token()
-
-    # Eğer token dict ise hata var demektir
-    if isinstance(token, dict):
-        return token
-
-    url = "https://api.bol.com/retailer/products"
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Accept": "application/vnd.retailer.v10+json"
-    }
-
-    response = requests.get(url, headers=headers)
-
-    # Boş response ise
-    if not response.text:
-        return {"error": "empty response", "status": response.status_code}
-
-    # JSON parse etmeyi dene
-    try:
-        return response.json()
-    except:
-        return {
-            "error": "json_parse_error",
-            "status": response.status_code,
-            "body": response.text
-        }
+    return _access_token
