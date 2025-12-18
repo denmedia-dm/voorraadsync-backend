@@ -82,7 +82,7 @@ input[type=number] {
     border-radius:8px;
 }
 
-/* ---------- MOBILE CARDS ---------- */
+/* ---------- MOBILE ---------- */
 @media (max-width:768px) {
     .table-container { display:none; }
     .mobile-list { display:block; }
@@ -119,7 +119,7 @@ input[type=number] {
 
 <div class="page">
 
-<!-- STATS -->
+<!-- ================= STATS ================= -->
 <div class="cards">
   <div class="card">
     <div class="card-title">Toplam ürün</div>
@@ -133,11 +133,11 @@ input[type=number] {
 
   <div class="card">
     <div class="card-title">Son senkron</div>
-    <div class="card-value" id="stat-sync" style="font-size:18px;">Yükleniyor...</div>
+    <div class="card-value" id="stat-sync" style="font-size:18px;">Yükleniyor…</div>
   </div>
 </div>
 
-<!-- TOOLBAR -->
+<!-- ================= TOOLBAR ================= -->
 <div class="toolbar">
     <div class="search-box">
         <input id="searchInput" placeholder="Ürün adı veya SKU ara..." onkeyup="filterResults()">
@@ -146,20 +146,23 @@ input[type=number] {
     <a href="/export/csv" class="btn-sync btn-blue">📥 CSV</a>
 </div>
 
-<!-- DESKTOP TABLE -->
+<!-- ================= DESKTOP TABLE ================= -->
 <div class="table-container">
 <table>
 <thead>
-<tr><th>ID</th><th>Ürün</th><th>SKU</th><th>Stok</th><th>Fiyat</th><th>Durum</th><th>Stok G.</th></tr>
+<tr>
+  <th>ID</th><th>Ürün</th><th>SKU</th>
+  <th>Stok</th><th>Fiyat</th><th>Durum</th><th>Stok G.</th>
+</tr>
 </thead>
 <tbody id="product-table"></tbody>
 </table>
 </div>
 
-<!-- MOBILE LIST -->
+<!-- ================= MOBILE LIST ================= -->
 <div class="mobile-list" id="mobile-list"></div>
 
-<!-- PAGINATION -->
+<!-- ================= PAGINATION ================= -->
 <div style="display:flex;justify-content:center;gap:10px;margin-top:20px;">
     <button onclick="prevPage()">⬅</button>
     <strong id="page-info">1 / 1</strong>
@@ -169,6 +172,19 @@ input[type=number] {
 </div>
 
 <script>
+/* ===== DASHBOARD STATS (LAZY LOAD) ===== */
+document.addEventListener("DOMContentLoaded", () => {
+  fetch("/api/dashboard/stats?threshold=5")
+    .then(r => r.json())
+    .then(d => {
+      if(d.error) return;
+      document.getElementById("stat-total").innerText = d.total_products ?? "-";
+      document.getElementById("stat-low").innerText = d.low_stock ?? "0";
+      document.getElementById("stat-sync").innerText = d.last_sync ?? "-";
+    });
+});
+
+/* ===== PRODUCTS ===== */
 let currentPage=1, totalPages=1, currentItems=[];
 
 function loadPage(page){
@@ -187,11 +203,15 @@ t.innerHTML+=`
 <td>${p.id}</td>
 <td>${p.name}</td>
 <td>${p.sku??"-"}</td>
-<td class="${(p.stock_quantity??9999)<5?'low-stock':''}">${p.stock_quantity??"-"}</td>
+<td class="${(p.stock_quantity??9999)<5?'low-stock':''}">
+${p.stock_quantity??"-"}
+</td>
 <td>${p.regular_price??"-"}</td>
 <td>${p.status}</td>
-<td><input id="qty-${p.id}" type="number" value="${p.stock_quantity??0}">
-<button class="btn-save" onclick="updateStock(${p.id})">Kaydet</button></td>
+<td>
+<input id="qty-${p.id}" type="number" value="${p.stock_quantity??0}">
+<button class="btn-save" onclick="updateStock(${p.id})">Kaydet</button>
+</td>
 </tr>`;
 });
 }
@@ -204,9 +224,14 @@ m.innerHTML+=`
 <div class="mobile-title">${p.name}</div>
 <div class="mobile-sku">${p.sku??"-"}</div>
 <div class="mobile-detail" id="m-${p.id}">
-<div class="detail-row"><span>Stok</span>
-<input id="mqty-${p.id}" type="number" value="${p.stock_quantity??0}"></div>
-<button class="mobile-save" onclick="event.stopPropagation();updateStock(${p.id})">Kaydet</button>
+<div class="detail-row">
+<span>Stok</span>
+<input id="mqty-${p.id}" type="number" value="${p.stock_quantity??0}">
+</div>
+<button class="mobile-save"
+onclick="event.stopPropagation();updateStock(${p.id})">
+Kaydet
+</button>
 </div></div>`;
 });
 }
@@ -217,7 +242,8 @@ e.style.display=e.style.display==="block"?"none":"block";
 }
 
 function updateStock(id){
-let q=document.getElementById("qty-"+id)?.value ?? document.getElementById("mqty-"+id).value;
+let q=document.getElementById("qty-"+id)?.value
+?? document.getElementById("mqty-"+id).value;
 fetch(`/woo/update_stock/${id}/${q}`).then(()=>loadPage(currentPage));
 }
 
