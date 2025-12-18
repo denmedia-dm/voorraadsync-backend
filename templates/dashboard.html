@@ -70,19 +70,20 @@ th, td {
 }
 .low-stock { color:#b91c1c; font-weight:bold; }
 input[type=number] {
-    width:70px; padding:7px;
-    border-radius:8px;
+    width:80px; padding:8px;
+    border-radius:10px;
     border:1px solid #d1d5db;
 }
 .btn-save {
-    padding:6px 12px;
+    padding:8px 14px;
     background:#4f46e5;
     color:white;
     border:none;
-    border-radius:8px;
+    border-radius:10px;
+    font-weight:600;
 }
 
-/* ---------- MOBILE ---------- */
+/* ---------- MOBILE LIST ---------- */
 @media (max-width:768px) {
     .table-container { display:none; }
     .mobile-list { display:block; }
@@ -93,27 +94,161 @@ input[type=number] {
         border-radius:14px;
         margin-bottom:12px;
         box-shadow:0 2px 12px rgba(0,0,0,0.06);
-    }
-    .mobile-title { font-size:16px; font-weight:700; }
-    .mobile-sku { font-size:13px; color:#6b7280; }
-    .mobile-detail { display:none; margin-top:12px; }
-    .detail-row {
         display:flex;
         justify-content:space-between;
-        margin-bottom:8px;
+        align-items:center;
+        gap:12px;
+        cursor:pointer;
     }
-    .mobile-save {
-        width:100%;
-        padding:10px;
-        background:#4f46e5;
-        color:white;
-        border:none;
-        border-radius:8px;
-        font-weight:600;
+    .mobile-left {
+        display:flex;
+        flex-direction:column;
+        gap:4px;
+        min-width:0;
+    }
+    .mobile-title {
+        font-size:16px;
+        font-weight:800;
+        overflow:hidden;
+        text-overflow:ellipsis;
+        white-space:nowrap;
+        max-width: 78vw;
+    }
+    .mobile-sku {
+        font-size:13px;
+        color:#6b7280;
+        overflow:hidden;
+        text-overflow:ellipsis;
+        white-space:nowrap;
+        max-width: 78vw;
+    }
+    .mobile-pill {
+        padding:6px 10px;
+        border-radius:999px;
+        font-weight:800;
+        font-size:12px;
+        background:#f3f4f6;
+        white-space:nowrap;
+    }
+    .pill-low {
+        background:#fee2e2;
+        color:#991b1b;
     }
 }
 @media (min-width:769px) {
     .mobile-list { display:none; }
+}
+
+/* ---------- BOTTOM SHEET (MOBILE EDIT) ---------- */
+.sheet-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+    display: none;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.sheet {
+    width: 100%;
+    max-width: 520px;
+    background: #fff;
+    border-radius: 18px 18px 0 0;
+    padding: 14px 14px 18px 14px;
+    box-shadow: 0 -10px 30px rgba(0,0,0,0.18);
+    transform: translateY(20px);
+    animation: sheetIn .18s ease-out forwards;
+}
+
+@keyframes sheetIn {
+    to { transform: translateY(0); }
+}
+
+.sheet-handle {
+    width: 42px;
+    height: 5px;
+    border-radius: 999px;
+    background: #e5e7eb;
+    margin: 6px auto 10px auto;
+}
+
+.sheet-head {
+    display:flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+}
+.sheet-title {
+    font-size: 16px;
+    font-weight: 900;
+    line-height: 1.2;
+    margin: 0;
+}
+.sheet-sub {
+    margin-top: 4px;
+    color:#6b7280;
+    font-size: 13px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    max-width: 88vw;
+}
+.sheet-close {
+    border: none;
+    background: #f3f4f6;
+    border-radius: 999px;
+    padding: 8px 10px;
+    cursor: pointer;
+    font-weight: 800;
+}
+
+.sheet-body {
+    margin-top: 14px;
+    display:flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.sheet-row {
+    display:flex;
+    justify-content: space-between;
+    align-items:center;
+    gap: 12px;
+    padding: 10px 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    background: #fafafa;
+}
+.sheet-label {
+    color:#111827;
+    font-weight: 800;
+}
+.sheet-actions {
+    margin-top: 8px;
+    display:flex;
+    gap: 10px;
+}
+.sheet-btn {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 14px;
+    border: none;
+    cursor: pointer;
+    font-weight: 900;
+}
+.sheet-btn-primary {
+    background:#4f46e5;
+    color:white;
+}
+.sheet-btn-ghost {
+    background:#f3f4f6;
+}
+
+.sheet-status {
+    margin-top: 10px;
+    font-size: 13px;
+    color: #6b7280;
 }
 </style>
 
@@ -171,6 +306,45 @@ input[type=number] {
 
 </div>
 
+<!-- ================= BOTTOM SHEET ================= -->
+<div class="sheet-overlay" id="sheetOverlay" onclick="closeSheet(event)">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-handle"></div>
+
+    <div class="sheet-head">
+      <div style="min-width:0;">
+        <h3 class="sheet-title" id="sheetName">Ürün</h3>
+        <div class="sheet-sub" id="sheetSku">SKU: -</div>
+      </div>
+      <button class="sheet-close" onclick="hideSheet()">Kapat</button>
+    </div>
+
+    <div class="sheet-body">
+      <div class="sheet-row">
+        <div class="sheet-label">Stok</div>
+        <input type="number" id="sheetStock" value="0" />
+      </div>
+
+      <div class="sheet-row">
+        <div class="sheet-label">Fiyat</div>
+        <div id="sheetPrice">-</div>
+      </div>
+
+      <div class="sheet-row">
+        <div class="sheet-label">Durum</div>
+        <div id="sheetStatus">-</div>
+      </div>
+
+      <div class="sheet-actions">
+        <button class="sheet-btn sheet-btn-ghost" onclick="hideSheet()">Vazgeç</button>
+        <button class="sheet-btn sheet-btn-primary" onclick="saveSheetStock()">Kaydet</button>
+      </div>
+
+      <div class="sheet-status" id="sheetMsg"></div>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ===== DASHBOARD STATS (LAZY LOAD) ===== */
 document.addEventListener("DOMContentLoaded", () => {
@@ -181,85 +355,148 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("stat-total").innerText = d.total_products ?? "-";
       document.getElementById("stat-low").innerText = d.low_stock ?? "0";
       document.getElementById("stat-sync").innerText = d.last_sync ?? "-";
-    });
+    })
+    .catch(()=>{});
 });
 
 /* ===== PRODUCTS ===== */
 let currentPage=1, totalPages=1, currentItems=[];
+let sheetProductId = null;
 
 function loadPage(page){
-fetch(`/woo/products/page/${page}`).then(r=>r.json()).then(d=>{
-currentPage=d.page; totalPages=d.total_pages; currentItems=d.items;
-document.getElementById("page-info").innerText=`${currentPage} / ${totalPages}`;
-drawDesktop(); drawMobile();
-});
+  fetch(`/woo/products/page/${page}`)
+    .then(r=>r.json())
+    .then(d=>{
+      currentPage=d.page; totalPages=d.total_pages; currentItems=d.items || [];
+      document.getElementById("page-info").innerText=`${currentPage} / ${totalPages}`;
+      drawDesktop(); drawMobile();
+    });
 }
 
 function drawDesktop(){
-const t=document.getElementById("product-table"); t.innerHTML="";
-currentItems.forEach(p=>{
-t.innerHTML+=`
-<tr>
-<td>${p.id}</td>
-<td>${p.name}</td>
-<td>${p.sku??"-"}</td>
-<td class="${(p.stock_quantity??9999)<5?'low-stock':''}">
-${p.stock_quantity??"-"}
-</td>
-<td>${p.regular_price??"-"}</td>
-<td>${p.status}</td>
-<td>
-<input id="qty-${p.id}" type="number" value="${p.stock_quantity??0}">
-<button class="btn-save" onclick="updateStock(${p.id})">Kaydet</button>
-</td>
-</tr>`;
-});
+  const t=document.getElementById("product-table"); t.innerHTML="";
+  currentItems.forEach(p=>{
+    t.innerHTML+=`
+      <tr>
+        <td>${p.id}</td>
+        <td>${escapeHtml(p.name)}</td>
+        <td>${escapeHtml(p.sku ?? "-")}</td>
+        <td class="${(p.stock_quantity??9999)<5?'low-stock':''}">
+          ${p.stock_quantity ?? "-"}
+        </td>
+        <td>${p.regular_price ?? "-"}</td>
+        <td>${p.status}</td>
+        <td>
+          <input id="qty-${p.id}" type="number" value="${p.stock_quantity??0}">
+          <button class="btn-save" onclick="updateStock(${p.id});">Kaydet</button>
+        </td>
+      </tr>`;
+  });
 }
 
 function drawMobile(){
-const m=document.getElementById("mobile-list"); m.innerHTML="";
-currentItems.forEach(p=>{
-m.innerHTML+=`
-<div class="mobile-card" onclick="toggle(${p.id})">
-<div class="mobile-title">${p.name}</div>
-<div class="mobile-sku">${p.sku??"-"}</div>
-<div class="mobile-detail" id="m-${p.id}">
-<div class="detail-row">
-<span>Stok</span>
-<input id="mqty-${p.id}" type="number" value="${p.stock_quantity??0}">
-</div>
-<button class="mobile-save"
-onclick="event.stopPropagation();updateStock(${p.id})">
-Kaydet
-</button>
-</div></div>`;
-});
-}
-
-function toggle(id){
-let e=document.getElementById("m-"+id);
-e.style.display=e.style.display==="block"?"none":"block";
+  const m=document.getElementById("mobile-list"); m.innerHTML="";
+  currentItems.forEach(p=>{
+    const stock = (p.stock_quantity ?? 0);
+    const lowClass = stock < 5 ? "mobile-pill pill-low" : "mobile-pill";
+    m.innerHTML+=`
+      <div class="mobile-card" onclick="openSheet(${p.id})">
+        <div class="mobile-left">
+          <div class="mobile-title">${escapeHtml(p.name)}</div>
+          <div class="mobile-sku">SKU: ${escapeHtml(p.sku ?? "-")}</div>
+        </div>
+        <div class="${lowClass}">Stok: ${stock}</div>
+      </div>`;
+  });
 }
 
 function updateStock(id){
-let q=document.getElementById("qty-"+id)?.value
-?? document.getElementById("mqty-"+id).value;
-fetch(`/woo/update_stock/${id}/${q}`).then(()=>loadPage(currentPage));
+  let q=document.getElementById("qty-"+id)?.value;
+  if(q === undefined || q === null) return;
+
+  fetch(`/woo/update_stock/${id}/${q}`)
+    .then(()=>loadPage(currentPage));
 }
 
 function filterResults(){
-let s=document.getElementById("searchInput").value.toLowerCase();
-document.querySelectorAll("#product-table tr").forEach(r=>{
-r.style.display=r.innerText.toLowerCase().includes(s)?"":"none";
-});
-document.querySelectorAll(".mobile-card").forEach(c=>{
-c.style.display=c.innerText.toLowerCase().includes(s)?"":"none";
-});
+  let s=(document.getElementById("searchInput").value || "").toLowerCase();
+
+  document.querySelectorAll("#product-table tr").forEach(r=>{
+    r.style.display = r.innerText.toLowerCase().includes(s) ? "" : "none";
+  });
+
+  document.querySelectorAll(".mobile-card").forEach(c=>{
+    c.style.display = c.innerText.toLowerCase().includes(s) ? "" : "none";
+  });
 }
 
 function nextPage(){ if(currentPage<totalPages) loadPage(currentPage+1); }
 function prevPage(){ if(currentPage>1) loadPage(currentPage-1); }
-function syncNow(){ fetch("/sync").then(()=>alert("Senkronlandı")); }
+
+function syncNow(){
+  fetch("/sync")
+    .then(r=>r.json())
+    .then(()=>alert("Senkronlandı"));
+}
+
+/* ===== BOTTOM SHEET ===== */
+function openSheet(productId){
+  const p = currentItems.find(x => x.id === productId);
+  if(!p) return;
+
+  sheetProductId = productId;
+  document.getElementById("sheetName").innerText = p.name ?? "Ürün";
+  document.getElementById("sheetSku").innerText = "SKU: " + (p.sku ?? "-");
+  document.getElementById("sheetStock").value = (p.stock_quantity ?? 0);
+  document.getElementById("sheetPrice").innerText = "€" + (p.regular_price ?? "-");
+  document.getElementById("sheetStatus").innerText = (p.status ?? "-");
+  document.getElementById("sheetMsg").innerText = "";
+
+  const overlay = document.getElementById("sheetOverlay");
+  overlay.style.display = "flex";
+}
+
+function hideSheet(){
+  document.getElementById("sheetOverlay").style.display = "none";
+  sheetProductId = null;
+}
+
+function closeSheet(e){
+  // overlay click => close
+  hideSheet();
+}
+
+function saveSheetStock(){
+  if(sheetProductId === null) return;
+
+  const qty = document.getElementById("sheetStock").value;
+  const msg = document.getElementById("sheetMsg");
+  msg.innerText = "Kaydediliyor…";
+
+  fetch(`/woo/update_stock/${sheetProductId}/${qty}`)
+    .then(r => r.json())
+    .then(() => {
+      msg.innerText = "✅ Kaydedildi";
+      // sayfayı güncelle
+      loadPage(currentPage);
+      // küçük gecikmeyle kapat
+      setTimeout(hideSheet, 400);
+    })
+    .catch(() => {
+      msg.innerText = "❌ Hata oluştu";
+    });
+}
+
+/* ===== utils ===== */
+function escapeHtml(str){
+  if(str === null || str === undefined) return "";
+  return String(str)
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
 
 loadPage(1);
 </script>
