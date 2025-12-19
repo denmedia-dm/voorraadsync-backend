@@ -40,17 +40,21 @@ def home():
     return {"status": "running", "message": "VoorraadSync API actief 🎯"}
 
 
-# ----------------- DASHBOARD (HTML ONLY - HIZLI AÇILIR) -----------------
+# ----------------- DASHBOARD -----------------
 @app.get("/dashboard", response_class=HTMLResponse)
 def dashboard(request: Request):
-    # Woo çağırmıyoruz -> sayfa anında açılır
     data = {
         "title": "VoorraadSync Dashboard",
-        "total_products": "...",
-        "low_stock": "...",
-        "last_sync": "Yükleniyor..."
+        # Kartlar JS ile dolacak
+        "total_products": None,
+        "low_stock": None,
+        "last_sync": None,
     }
-    return templates.TemplateResponse("dashboard.html", {"request": request, "data": data})
+
+    return templates.TemplateResponse(
+        "dashboard.html",
+        {"request": request, "data": data}
+    )
 
 
 # ----------------- DASHBOARD STATS API (LAZY LOAD) -----------------
