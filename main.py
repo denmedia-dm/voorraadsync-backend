@@ -194,14 +194,22 @@ def low_stock_report(threshold: int = 5, limit: int = 50):
 # ----------------- WOO ENDPOINTLERİ -----------------
 @app.get("/woo/products/page/{page}")
 def woo_products_page(page: int, per_page: int = 50):
-    """
-    Dashboard tablo + mobil kartlar bu endpoint'i kullanır.
-    """
     try:
         result = woo_api.get_woo_products(page=page, per_page=per_page)
-        return result
+
+        return {
+            "page": page,
+            "total_pages": result.get("total_pages", 1),
+            "items": result.get("items", [])
+        }
+
     except Exception as e:
-        return {"error": str(e)}
+        return {
+            "page": page,
+            "total_pages": 1,
+            "items": [],
+            "error": str(e)
+        }
 
 
 @app.get("/woo/update_stock/{product_id}/{quantity}")
